@@ -133,6 +133,13 @@ message("  Salvato: Integration_01_PCA_pre_harmony.pdf")
 #   - plot_convergence: True per vedere la convergenza dell'algoritmo
 
 message("Harmony in corso...")
+
+# Rileva dinamicamente quante PC sono state effettivamente calcolate.
+# Con pannelli piccoli (6 proteine) RunPCA puo' produrre meno di npcs
+# componenti se alcune features hanno varianza quasi zero dopo ScaleData.
+n_pcs_computed <- ncol(Embeddings(seurat_obj, "pca"))
+message(sprintf("  PC calcolate da RunPCA: %d", n_pcs_computed))
+
 set.seed(42)  # Riproducibilita'
 seurat_obj <- RunHarmony(
   seurat_obj,
@@ -140,7 +147,7 @@ seurat_obj <- RunHarmony(
   reduction           = "pca",
   reduction.save      = "harmony",
   assay.use           = "MICS",
-  dims.use            = 1:6,
+  dims.use            = seq_len(n_pcs_computed),
   theta               = 2,
   max_iter            = 20,
   plot_convergence    = FALSE,

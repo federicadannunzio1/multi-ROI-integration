@@ -63,11 +63,12 @@ SHORT_NAMES <- rownames(seurat_obj)
 #   - k grande  -> cluster piu' robusti ma potenzialmente sovrasmoothati
 # Con 461K cellule e 6 proteine, k=30 e' appropriato.
 
-message("FindNeighbors (k=30, dims=1:6 da Harmony)...")
+n_pcs_harmony <- ncol(Embeddings(seurat_obj, "harmony"))
+message(sprintf("FindNeighbors (k=30, dims=1:%d da Harmony)...", n_pcs_harmony))
 seurat_obj <- FindNeighbors(
   seurat_obj,
   reduction = "harmony",
-  dims      = 1:6,
+  dims      = seq_len(n_pcs_harmony),
   k.param   = 30,
   verbose   = FALSE
 )
@@ -139,7 +140,7 @@ set.seed(42)
 seurat_obj <- RunUMAP(
   seurat_obj,
   reduction      = "harmony",
-  dims           = 1:6,
+  dims           = seq_len(n_pcs_harmony),
   n.neighbors    = 30,
   min.dist       = 0.3,
   spread         = 1,

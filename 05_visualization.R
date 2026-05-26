@@ -229,6 +229,67 @@ message("  LC3B+/P62+ = blocco autofagico")
 message("  pMTOR+/LC3B- = inibizione autofagia via mTOR")
 message("---------------------------------------")
 
+# --------------------------------------------------------------------------
+# STEP 5f — Export matrice integrata completa
+# --------------------------------------------------------------------------
+# Esporta un'unica tabella TSV con:
+#   - cell_id       : identificatore univoco della cellula (ROI1_cell_0, ...)
+#   - roi_id        : ROI di provenienza
+#   - cluster       : cluster assegnato
+#   - UMAP_1, UMAP_2: coordinate UMAP
+#   - Ki67 ... PVR  : valori arcsinh-trasformati (layer "data")
+#
+# Formato TSV (tab-separated):
+#   - Leggibile da R (read.table), Python (pd.read_csv sep='\t'), Excel
+#   - Preferito a xlsx per dataset grandi: nessun limite di righe,
+#     file piu' leggeri, nessuna dipendenza da pacchetti extra
+#
+# NOTA: i valori esportati sono arcsinh(MFI / cofactor=1), NON i raw MFI.
+# Se vuoi anche i raw, cambia layer = "counts" e salva un secondo file.
+
+message("Export matrice integrata...")
+
+# Matrice arcsinh (proteine x cellule) -> trasponi a cellule x proteine
+mat_export <- t(as.matrix(
+  GetAssayData(seurat_obj, layer = "data", assay = "MICS")
+))
+
+# Coordinate UMAP
+umap_coords <- Embeddings(seurat_obj, "umap")
+
+# Assembla dataframe finale
+export_df <- data.frame(
+  cell_id = rownames(mat_export),
+  roi_id  = seurat_obj$roi_id,
+  cluster = seurat_obj$cluster,
+  UMAP_1  = round(umap_coords[, 1], 4),
+  UMAP_2  = round(umap_coords[, 2], 4),
+  round(mat_export, 4),
+  check.names = FALSE
+)
+
+out_tsv <- file.path(DATA_DIR, "06_integrated_matrix_arcsinh.tsv")
+write.table(export_df,
+            file      = out_tsv,
+            sep       = "\t",
+            row.names = FALSE,
+            quote     = FALSE)
+
+message(sprintf("  Salvato: 06_integrated_matrix_arcsinh.tsv"))
+message(sprintf("  Dimensioni: %d cellule x %d colonne", nrow(export_df), ncol(export_df)))
+message(sprintf("  Colonne: cell_id, roi_id, cluster, UMAP_1, UMAP_2, %s",
+                paste(SHORT_NAMES, collapse = ", ")))
+
+# Matrice minima: solo cellule x proteine (arcsinh), senza metadati
+out_mat <- file.path(DATA_DIR, "06_protein_matrix_arcsinh.tsv")
+write.table(round(mat_export, 4),
+            file      = out_mat,
+            sep       = "\t",
+            row.names = TRUE,   # cell_id come rownames
+            col.names = TRUE,
+            quote     = FALSE)
+message("  Salvato: 06_protein_matrix_arcsinh.tsv (cellule x proteine, solo valori)")
+
 message("=== STEP 5 completato ===\n")
 message("Pipeline completata. Output in:")
 message("  Plot:  ", PLOT_DIR)
