@@ -281,16 +281,24 @@ message(sprintf("  Colonne: cell_id, roi_id, cluster, UMAP_1, UMAP_2, %s",
                 paste(SHORT_NAMES, collapse = ", ")))
 
 # Matrice minima: solo cellule x proteine (arcsinh), senza metadati
+# Usiamo row.names = FALSE e aggiungiamo cell_id come colonna esplicita:
+# write.table con row.names=TRUE produce un header sfasato (bug R classico
+# in Excel/Python) perche' non aggiunge titolo alla colonna dei rownames.
 out_mat <- file.path(DATA_DIR, "06_protein_matrix_arcsinh.tsv")
-write.table(round(mat_export, 4),
+mat_export_out <- cbind(
+  cell_id = rownames(mat_export),
+  as.data.frame(round(mat_export, 4))
+)
+write.table(mat_export_out,
             file      = out_mat,
             sep       = "\t",
-            row.names = TRUE,   # cell_id come rownames
+            row.names = FALSE,
             col.names = TRUE,
             quote     = FALSE)
-message("  Salvato: 06_protein_matrix_arcsinh.tsv (cellule x proteine, solo valori)")
+message("  Salvato: 06_protein_matrix_arcsinh.tsv (cell_id + proteine arcsinh)")
 
 message("=== STEP 5 completato ===\n")
 message("Pipeline completata. Output in:")
 message("  Plot:  ", PLOT_DIR)
 message("  Dati:  ", DATA_DIR)
+

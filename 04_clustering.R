@@ -81,7 +81,7 @@ seurat_obj <- FindNeighbors(
 # La resolution giusta e' quella dove l'aggiunta di una nuova resolution
 # non sposta molte cellule tra cluster esistenti.
 
-resolutions <- c(0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5)
+resolutions <- c(0.1, 0.2, 0.3, 0.5)
 
 message("Scansione resolution: ", paste(resolutions, collapse = ", "))
 for (res in resolutions) {
@@ -116,7 +116,8 @@ message("  (suggerito: resolution con minime migrazioni inter-cluster)")
 # MODIFICA QUESTA VARIABILE in base all'ispezione del clustree plot.
 # Default: 0.5 (buon punto di partenza per pannelli piccoli)
 
-FINAL_RESOLUTION <- 0.5
+FINAL_RESOLUTION <- 0.1
+
 
 # Imposta i cluster finali come colonna 'leiden_clusters' (nome generico
 # anche se usiamo Louvain, per compatibilita' futura con Leiden)
@@ -188,7 +189,8 @@ p_features <- FeaturePlot(
   features  = SHORT_NAMES,
   reduction = "umap",
   pt.size   = 0.005,
-  order     = TRUE,      # Le celle con alta espressione vengono disegnate sopra
+  order     = FALSE,
+  raster    = FALSE,
   ncol      = 3,
   cols      = c("lightgrey", "darkred")
 ) &

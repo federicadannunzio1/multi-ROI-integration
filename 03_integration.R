@@ -101,17 +101,30 @@ for (i in seq_along(var_explained)) {
 # --------------------------------------------------------------------------
 # STEP 3c — Plot PCA pre-Harmony
 # --------------------------------------------------------------------------
+# Plot diagnostici con ggplot2 diretto (no DimPlot).
+# DimPlot puo' produrre plot vuoti con assay custom in Seurat v5.
+# Estraiamo le coordinate con Embeddings() e plottiamo manualmente.
+# Subsample di 50K cellule per leggibilita' del PDF.
 
-p_pca_roi <- DimPlot(
-  seurat_obj,
-  reduction = "pca",
-  group.by  = "roi_id",
-  pt.size   = 0.01,
-  alpha     = 0.1
-) +
-  labs(title = "PCA pre-Harmony (colorato per ROI)",
-       subtitle = "Se i ROI si separano nettamente -> batch effect rilevante") +
-  scale_color_brewer(palette = "Set1") +
+set.seed(42)
+N_PLOT     <- min(50000, ncol(seurat_obj))
+idx_plot   <- sample(seq_len(ncol(seurat_obj)), N_PLOT)
+message(sprintf("  Subsample per plot diagnostici: %d cellule su %d",
+                N_PLOT, ncol(seurat_obj)))
+
+# Dataframe per i plot: coordinate PCA + roi_id
+pca_coords <- as.data.frame(Embeddings(seurat_obj, "pca")[idx_plot, 1:2])
+colnames(pca_coords) <- c("PC1", "PC2")
+pca_coords$roi_id <- seurat_obj$roi_id[idx_plot]
+
+p_pca_roi <- ggplot(pca_coords, aes(x = PC1, y = PC2, colour = roi_id)) +
+  geom_point(size = 0.3, alpha = 0.4) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title    = "PCA pre-Harmony (colorato per ROI)",
+       subtitle = sprintf("Subsample %dk celle — se i ROI si separano -> batch effect rilevante",
+                          N_PLOT / 1000),
+       colour = "ROI") +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw()
 
 ggsave(file.path(PLOT_DIR, "Integration_01_PCA_pre_harmony.pdf"),
@@ -143,15 +156,14 @@ message(sprintf("  PC calcolate da RunPCA: %d", n_pcs_computed))
 set.seed(42)  # Riproducibilita'
 seurat_obj <- RunHarmony(
   seurat_obj,
-  group.by.vars       = "roi_id",
-  reduction           = "pca",
-  reduction.save      = "harmony",
-  assay.use           = "MICS",
-  dims.use            = seq_len(n_pcs_computed),
-  theta               = 2,
-  max_iter            = 20,
-  plot_convergence    = FALSE,
-  verbose             = FALSE
+  group.by.vars    = "roi_id",
+  reduction.use    = "pca",
+  reduction.save   = "harmony",
+  dims.use         = seq_len(n_pcs_computed),
+  theta            = 2,
+  max_iter         = 20,
+  plot_convergence = FALSE,
+  verbose          = FALSE
 )
 
 message("Harmony completato.")
@@ -161,16 +173,18 @@ message("Embedding corretto disponibile in: seurat_obj[['harmony']]")
 # STEP 3e — Plot PCA post-Harmony
 # --------------------------------------------------------------------------
 
-p_harmony_roi <- DimPlot(
-  seurat_obj,
-  reduction = "harmony",
-  group.by  = "roi_id",
-  pt.size   = 0.01,
-  alpha     = 0.1
-) +
-  labs(title = "Embedding Harmony (colorato per ROI)",
-       subtitle = "I ROI devono sovrapporsi se il batch effect e' stato corretto") +
-  scale_color_brewer(palette = "Set1") +
+harmony_coords <- as.data.frame(Embeddings(seurat_obj, "harmony")[idx_plot, 1:2])
+colnames(harmony_coords) <- c("H1", "H2")
+harmony_coords$roi_id <- seurat_obj$roi_id[idx_plot]
+
+p_harmony_roi <- ggplot(harmony_coords, aes(x = H1, y = H2, colour = roi_id)) +
+  geom_point(size = 0.3, alpha = 0.4) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title    = "Embedding Harmony (colorato per ROI)",
+       subtitle = "I ROI devono sovrapporsi se il batch effect e' stato corretto",
+       x = "Harmony 1", y = "Harmony 2",
+       colour = "ROI") +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw()
 
 ggsave(file.path(PLOT_DIR, "Integration_02_Harmony_post_correction.pdf"),
