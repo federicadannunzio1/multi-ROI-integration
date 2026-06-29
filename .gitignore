@@ -1,0 +1,20 @@
+# Dati grezzi (voluminosi, dati paziente)
+data/
+
+# Output binari grandi
+output/data/*.rds
+
+# Log
+logs/
+
+# Manoscritto (gestito separatamente)
+manuscript/
+
+# R temporanei
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# macOS
+.DS_Store
