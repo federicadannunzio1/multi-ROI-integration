@@ -1,65 +1,72 @@
 #!/bin/bash
 # =============================================================================
 # run_pipeline.sh
-# SLURM job script per la pipeline MACSima
+# SLURM job script for the MACSima MICS pipeline
 #
-# Uso:
-#   sbatch scripts/run_pipeline.sh           # pipeline completa
-#   sbatch scripts/run_pipeline.sh --from 3  # riparte dallo step 3
+# Usage (submit from the project root directory):
+#   sbatch scripts/run_pipeline.sh              # full pipeline
+#   sbatch scripts/run_pipeline.sh --from 3     # restart from step 3
 #   sbatch scripts/run_pipeline.sh --steps 5,6,7
 #
-# Adatta le righe #SBATCH in base alla coda/partizione del tuo cluster.
+# Adjust #SBATCH directives to match your cluster's partition and resources.
+# The conda environment name and activation path may also need to be adapted.
 # =============================================================================
 
 #SBATCH --job-name=MACSima_pipeline
-#SBATCH --output=/lustre/home/gfiscon/projects/MACSima_pipeline/logs/slurm_%j.log
-#SBATCH --error=/lustre/home/gfiscon/projects/MACSima_pipeline/logs/slurm_%j.log
-#SBATCH --time=8-00:00:00        # walltime: max partizione dss su TERSTAT2 (8 giorni)
-#SBATCH --mem=192G               # RAM: FindNeighbors su ~4M cellule richiede >=128G
-#SBATCH --cpus-per-task=8        # Harmony e UMAP parallelizzano su thread
+#SBATCH --output=logs/slurm_%j.log
+#SBATCH --error=logs/slurm_%j.log
+#SBATCH --time=8-00:00:00        # walltime: adjust to your cluster's partition limit
+#SBATCH --mem=192G               # RAM: FindNeighbors on ~5M cells requires >=128G
+#SBATCH --cpus-per-task=8        # Harmony and UMAP benefit from multi-threading
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=federicadannunzio@gmail.com
+# #SBATCH --mail-user=your.email@institution.edu   # uncomment and set your email
 
 # --------------------------------------------------------------------------
-# Ambiente conda (R 4.4 + Seurat installati in seurat_env)
+# Conda environment (R + Seurat installed in seurat_env)
+# Adapt the path below to your cluster's conda installation.
 # --------------------------------------------------------------------------
 
+# source /path/to/conda/etc/profile.d/conda.sh
 source /lustre/software/anaconda/2022.10_all/etc/profile.d/conda.sh
 conda activate seurat_env
 
 # --------------------------------------------------------------------------
-# Variabili
+# Variables — derived from submission directory, no hardcoded paths
 # --------------------------------------------------------------------------
 
-PROJECT_DIR="/lustre/home/gfiscon/projects/MACSima_pipeline"
+# SLURM_SUBMIT_DIR is set automatically to the directory from which sbatch
+# was called. Always submit from the project root: cd MACSima_pipeline && sbatch ...
+PROJECT_DIR="${SLURM_SUBMIT_DIR}"
 SCRIPT="$PROJECT_DIR/scripts/run_pipeline.R"
 LOG_DIR="$PROJECT_DIR/logs"
 
 mkdir -p "$LOG_DIR"
 
-# Passa eventuali argomenti aggiuntivi (es. --from 3) a run_pipeline.R
+# Optional: pass MACSIMA_DIR to R so config.R picks it up via Sys.getenv()
+export MACSIMA_DIR="$PROJECT_DIR"
+
+# Additional arguments forwarded to run_pipeline.R (e.g. --from 3)
 EXTRA_ARGS="$@"
 
 # --------------------------------------------------------------------------
-# Diagnostica ambiente
+# Environment diagnostics
 # --------------------------------------------------------------------------
 
 echo "============================================="
 echo "MACSima pipeline — SLURM job $SLURM_JOB_ID"
-echo "  Data:        $(date)"
-echo "  Nodo:        $SLURMD_NODENAME"
-echo "  CPUs:        $SLURM_CPUS_PER_TASK"
-echo "  RAM (richiesta): ${SLURM_MEM_PER_NODE}MB"
-echo "  Working dir: $PROJECT_DIR"
+echo "  Date:         $(date)"
+echo "  Node:         $SLURMD_NODENAME"
+echo "  CPUs:         $SLURM_CPUS_PER_TASK"
+echo "  RAM (requested): ${SLURM_MEM_PER_NODE}MB"
+echo "  Project dir:  $PROJECT_DIR"
 echo "============================================="
 
 R --version | head -1
 
 # --------------------------------------------------------------------------
-# Imposta numero di thread per librerie multi-threaded
-# (Harmony, data.table, openblas)
+# Multi-threaded library settings
 # --------------------------------------------------------------------------
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -68,10 +75,10 @@ export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export BLAS_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # --------------------------------------------------------------------------
-# Lancia la pipeline
+# Launch pipeline
 # --------------------------------------------------------------------------
 
-echo "Avvio: Rscript $SCRIPT $EXTRA_ARGS"
+echo "Running: Rscript $SCRIPT $EXTRA_ARGS"
 echo ""
 
 Rscript "$SCRIPT" $EXTRA_ARGS
@@ -80,12 +87,12 @@ EXIT_CODE=$?
 echo ""
 echo "============================================="
 if [ $EXIT_CODE -eq 0 ]; then
-  echo "Pipeline completata con successo."
+  echo "Pipeline completed successfully."
 else
-  echo "Pipeline FALLITA (exit code: $EXIT_CODE)."
-  echo "Controlla: $LOG_DIR/slurm_${SLURM_JOB_ID}.err"
+  echo "Pipeline FAILED (exit code: $EXIT_CODE)."
+  echo "Check: $LOG_DIR/slurm_${SLURM_JOB_ID}.log"
 fi
-echo "Fine: $(date)"
+echo "Date: $(date)"
 echo "============================================="
 
 exit $EXIT_CODE

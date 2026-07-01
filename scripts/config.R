@@ -9,7 +9,12 @@
 # Paths
 # --------------------------------------------------------------------------
 
-BASE_DIR  <- "/lustre/home/gfiscon/projects/MACSima_pipeline"
+# BASE_DIR: root of the project.
+# Default: current working directory (getwd()) — works when the pipeline is
+# launched from the project root (e.g. cd MACSima_pipeline && sbatch ...).
+# Override by setting the environment variable MACSIMA_DIR before running:
+#   export MACSIMA_DIR=/your/path/to/MACSima_pipeline
+BASE_DIR  <- Sys.getenv("MACSIMA_DIR", unset = getwd())
 DATA_DIR  <- file.path(BASE_DIR, "data")
 OUT_DATA  <- file.path(BASE_DIR, "output", "data")
 OUT_PLOTS <- file.path(BASE_DIR, "output", "plots")
