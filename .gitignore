@@ -8,6 +8,9 @@ logs/
 # Manuscript (managed separately)
 manuscript/
 
+# Report documents (local only)
+report_docs/
+
 # R temporary files
 .Rhistory
 .RData
