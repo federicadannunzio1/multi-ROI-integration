@@ -135,7 +135,7 @@ SAMPLES <- list(
       ROI3 = file.path(DATA_DIR, "SHH_24-8477", "ROI3"),
       ROI4 = file.path(DATA_DIR, "SHH_24-8477", "ROI4")
     )
-  ),
+  )
   # SHH_25-6667 ESCLUSO — artefatto tecnico confermato:
   #   - P62 MFI raw = 0 su tutte le cellule (arcsinh = 0), biologicamente impossibile
   #     (P62 e' un recettore autofagico costitutivamente espresso)
