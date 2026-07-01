@@ -1,16 +1,14 @@
-# Dati grezzi (voluminosi, dati paziente)
+# Raw data (large, patient data)
 data/
 
-# Output binari grandi
-output/data/*.rds
-
-# Log
+# Pipeline outputs
+output/
 logs/
 
-# Manoscritto (gestito separatamente)
+# Manuscript (managed separately)
 manuscript/
 
-# R temporanei
+# R temporary files
 .Rhistory
 .RData
 .Rproj.user/
