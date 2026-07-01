@@ -38,8 +38,8 @@ all_patients <- sort(unique(seurat_obj$patient_id))
 g3_patients  <- sort(unique(seurat_obj$patient_id[seurat_obj$group == "G3"]))
 shh_patients <- sort(unique(seurat_obj$patient_id[seurat_obj$group == "SHH"]))
 palette_patient <- c(
-  setNames(colorRampPalette(c("#E41A1C", "#FC8D59"))(length(g3_patients)),  g3_patients),
-  setNames(colorRampPalette(c("#377EB8", "#91BFDB"))(length(shh_patients)), shh_patients)
+  setNames(PALETTE_PATIENTS_G3[seq_along(g3_patients)],   g3_patients),
+  setNames(PALETTE_PATIENTS_SHH[seq_along(shh_patients)], shh_patients)
 )
 
 message(sprintf("Cellule: %d | Pazienti G3: %d | Pazienti SHH: %d",
@@ -84,20 +84,20 @@ mat_heatmap <- as.matrix(patient_med_wide[, SHORT_NAMES])
 rownames(mat_heatmap) <- paste0(patient_med_wide$patient_id,
                                 " (", patient_med_wide$group, ")")
 
-ann_row <- data.frame(Gruppo = patient_med_wide$group,
+ann_row <- data.frame(Group = patient_med_wide$group,
                       row.names = rownames(mat_heatmap))
 
 pheatmap(
   mat_heatmap,
   scale                    = "column",
   annotation_row           = ann_row,
-  annotation_colors        = list(Gruppo = PALETTE_GROUP),
+  annotation_colors        = list(Group = PALETTE_GROUP),
   clustering_distance_rows = "euclidean",
   clustering_distance_cols = "euclidean",
   clustering_method        = "ward.D2",
   color = colorRampPalette(c("navy", "white", "firebrick3"))(100),
   fontsize = 11,
-  main = sprintf("Mediane arcsinh per paziente (Z-score, cofactor=%d)", COFACTOR),
+  main = sprintf("Patient arcsinh medians (Z-score per protein, cofactor = %d)", COFACTOR),
   filename = file.path(OUT_PLOTS, "Comparison_01_heatmap_patient_medians.pdf"),
   width = 9, height = 7
 )
@@ -135,10 +135,10 @@ p_violin <- ggplot(df_violin_long,
   facet_wrap(~protein, scales = "free_y", ncol = 3) +
   scale_fill_manual(values = PALETTE_GROUP) +
   labs(
-    title    = "Distribuzione proteica: G3 vs SHH",
-    subtitle = sprintf("Violin = distribuzione single-cell | Punti = mediana per paziente | arcsinh(MFI/%d)", COFACTOR),
-    x = "Gruppo", y = sprintf("arcsinh(MFI / %d)", COFACTOR),
-    fill = "Gruppo", shape = "Paziente"
+    title    = "Protein expression: G3 vs SHH",
+    subtitle = sprintf("Violin = single-cell distribution | Dots = patient median | arcsinh(MFI / %d)", COFACTOR),
+    x = "Group", y = sprintf("arcsinh(MFI / %d)", COFACTOR),
+    fill = "Group", shape = "Patient"
   ) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom")
@@ -160,9 +160,9 @@ p_bar <- ggplot(patient_medians_df,
   scale_fill_manual(values = palette_patient) +
   facet_wrap(~group) +
   labs(
-    title    = "Mediana per paziente: G3 vs SHH",
+    title    = "Patient median expression: G3 vs SHH",
     subtitle = sprintf("arcsinh(MFI / %d)", COFACTOR),
-    x = "Proteina", y = "Mediana arcsinh", fill = "Paziente"
+    x = "Protein", y = "Median arcsinh", fill = "Patient"
   ) +
   theme_bw(base_size = 12) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))

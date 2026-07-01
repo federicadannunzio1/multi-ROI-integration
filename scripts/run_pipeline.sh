@@ -14,7 +14,7 @@
 #SBATCH --job-name=MACSima_pipeline
 #SBATCH --output=/lustre/home/gfiscon/projects/MACSima_pipeline/logs/slurm_%j.log
 #SBATCH --error=/lustre/home/gfiscon/projects/MACSima_pipeline/logs/slurm_%j.log
-#SBATCH --time=12:00:00          # walltime: aggiusta in base al cluster
+#SBATCH --time=8-00:00:00        # walltime: max partizione dss su TERSTAT2 (8 giorni)
 #SBATCH --mem=192G               # RAM: FindNeighbors su ~4M cellule richiede >=128G
 #SBATCH --cpus-per-task=8        # Harmony e UMAP parallelizzano su thread
 #SBATCH --nodes=1

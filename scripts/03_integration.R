@@ -41,8 +41,8 @@ g3_patients   <- sort(all_patients[all_patients %in%
                     all_patients %in% unique(seurat_obj$patient_id[seurat_obj$group == "G3"])])
 shh_patients  <- sort(setdiff(all_patients, g3_patients))
 palette_patient <- c(
-  setNames(colorRampPalette(c("#E41A1C", "#FC8D59"))(length(g3_patients)),  g3_patients),
-  setNames(colorRampPalette(c("#377EB8", "#91BFDB"))(length(shh_patients)), shh_patients)
+  setNames(PALETTE_PATIENTS_G3[seq_along(g3_patients)],   g3_patients),
+  setNames(PALETTE_PATIENTS_SHH[seq_along(shh_patients)], shh_patients)
 )
 
 # --------------------------------------------------------------------------
@@ -81,16 +81,16 @@ pca_df$group      <- seurat_obj$group[idx_plot]
 p_pre_pat <- ggplot(pca_df, aes(x = PC1, y = PC2, colour = patient_id)) +
   geom_point(size = 0.2, alpha = 0.3) +
   scale_colour_manual(values = palette_patient) +
-  labs(title = "PCA pre-Harmony", subtitle = "Colorato per paziente",
-       colour = "Paziente") +
+  labs(title = "PCA — pre-Harmony", subtitle = "Colored by patient",
+       colour = "Patient") +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw()
 
 p_pre_grp <- ggplot(pca_df, aes(x = PC1, y = PC2, colour = group)) +
   geom_point(size = 0.2, alpha = 0.3) +
   scale_colour_manual(values = PALETTE_GROUP) +
-  labs(title = "PCA pre-Harmony", subtitle = "Colorato per gruppo",
-       colour = "Gruppo") +
+  labs(title = "PCA — pre-Harmony", subtitle = "Colored by group",
+       colour = "Group") +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw()
 
@@ -131,16 +131,16 @@ harm_df$group      <- seurat_obj$group[idx_plot]
 p_post_pat <- ggplot(harm_df, aes(x = H1, y = H2, colour = patient_id)) +
   geom_point(size = 0.2, alpha = 0.3) +
   scale_colour_manual(values = palette_patient) +
-  labs(title = "Post-Harmony", subtitle = "I pazienti devono sovrapporsi",
-       x = "Harmony 1", y = "Harmony 2", colour = "Paziente") +
+  labs(title = "Post-Harmony", subtitle = "Patients should overlap after batch correction",
+       x = "Harmony 1", y = "Harmony 2", colour = "Patient") +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw()
 
 p_post_grp <- ggplot(harm_df, aes(x = H1, y = H2, colour = group)) +
   geom_point(size = 0.2, alpha = 0.3) +
   scale_colour_manual(values = PALETTE_GROUP) +
-  labs(title = "Post-Harmony", subtitle = "G3 e SHH devono restare separati",
-       x = "Harmony 1", y = "Harmony 2", colour = "Gruppo") +
+  labs(title = "Post-Harmony", subtitle = "G3 and SHH groups should remain separated",
+       x = "Harmony 1", y = "Harmony 2", colour = "Group") +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw()
 
@@ -150,7 +150,7 @@ message("  Salvato: Integration_02_Harmony_post.pdf")
 
 p_comparison <- (p_pre_pat + p_pre_grp) / (p_post_pat + p_post_grp) +
   plot_annotation(title = "Batch correction: PCA vs Harmony",
-                  subtitle = "Sopra: pre-Harmony | Sotto: post-Harmony")
+                  subtitle = "Top: pre-Harmony | Bottom: post-Harmony")
 
 ggsave(file.path(OUT_PLOTS, "Integration_03_comparison_pre_post.pdf"),
        p_comparison, width = 14, height = 12)

@@ -153,8 +153,8 @@ message("Salvato: skewness_cells.csv")
 g3_pats  <- sort(unique(df_all$patient_id[df_all$group == "G3"]))
 shh_pats <- sort(unique(df_all$patient_id[df_all$group == "SHH"]))
 palette_patient <- c(
-  setNames(colorRampPalette(c("#E41A1C", "#FC8D59"))(length(g3_pats)),  g3_pats),
-  setNames(colorRampPalette(c("#377EB8", "#91BFDB"))(length(shh_pats)), shh_pats)
+  setNames(PALETTE_PATIENTS_G3[seq_along(g3_pats)],   g3_pats),
+  setNames(PALETTE_PATIENTS_SHH[seq_along(shh_pats)], shh_pats)
 )
 
 # Ordine pazienti per plot: G3 in alto, SHH in basso
@@ -178,9 +178,9 @@ p_ridge <- ggplot(df_long,
   scale_fill_manual(values = PALETTE_GROUP) +
   geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", linewidth = 0.4) +
   labs(
-    title    = "Distribuzione skewness LC3B e P62 per paziente",
-    subtitle = "Skewness > 0 = distribuzione puntiforme; skewness \u2248 0 = distribuzione diffusa",
-    x = "Skewness", y = "Paziente", fill = "Gruppo"
+    title    = "LC3B and P62 skewness distribution by patient",
+    subtitle = "Skewness > 0 = punctate distribution; skewness \u2248 0 = diffuse distribution",
+    x = "Skewness", y = "Patient", fill = "Group"
   ) +
   theme_ridges(font_size = 10) +
   theme(legend.position = "top",
@@ -213,8 +213,8 @@ p_violin <- ggplot(df_long_sub, aes(x = group, y = skewness, fill = group)) +
   scale_fill_manual(values = PALETTE_GROUP) +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40", linewidth = 0.4) +
   labs(
-    title = "Skewness LC3B e P62: G3 vs SHH (livello cellula)",
-    x = "Gruppo", y = "Skewness", fill = "Gruppo"
+    title = "LC3B and P62 skewness: G3 vs SHH (single-cell level)",
+    x = "Group", y = "Skewness", fill = "Group"
   ) +
   theme_bw(base_size = 12) +
   theme(legend.position = "none",
@@ -245,11 +245,11 @@ p_scatter <- ggplot(df_sc, aes(x = LC3B_skewness, y = P62_skewness,
              colour = "grey50", linewidth = 0.3) +
   labs(
     title    = "LC3B skewness vs P62 skewness",
-    subtitle = sprintf("Subsample: %s cellule; contours = densita' per gruppo",
+    subtitle = sprintf("Subsample: %s cells; contours = density per group",
                        format(nrow(df_sc), big.mark = ",")),
-    x = "LC3B Cytoplasm Skewness",
-    y = "P62 Cytoplasm Skewness",
-    colour = "Gruppo"
+    x = "LC3B cytoplasm skewness",
+    y = "P62 cytoplasm skewness",
+    colour = "Group"
   ) +
   theme_bw(base_size = 12) +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
@@ -294,10 +294,10 @@ p_medians <- ggplot(df_med_long,
   geom_hline(yintercept = 0, linetype = "dashed",
              colour = "grey40", linewidth = 0.4) +
   labs(
-    title    = "Mediana skewness per paziente: G3 vs SHH",
-    subtitle = "Ogni punto = un paziente; barra = media di gruppo",
-    x = "Gruppo", y = "Mediana skewness",
-    colour = "Gruppo", shape = "Paziente"
+    title    = "Median skewness per patient: G3 vs SHH",
+    subtitle = "Each point = one patient; bar = group mean",
+    x = "Group", y = "Median skewness",
+    colour = "Group", shape = "Patient"
   ) +
   theme_bw(base_size = 12) +
   theme(strip.background = element_rect(fill = "grey90"))

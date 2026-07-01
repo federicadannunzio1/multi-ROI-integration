@@ -144,9 +144,9 @@ for (i in seq_len(nrow(PAIRS))) {
               size = 3.5, inherit.aes = FALSE) +
     labs(
       title    = paste0(x_name, " vs ", y_name),
-      subtitle = "Spearman rho (media per gruppo) su subsample 5k/paziente",
-      x = sprintf("%s [arcsinh(MFI/%d)]", x_name, COFACTOR),
-      y = sprintf("%s [arcsinh(MFI/%d)]", y_name, COFACTOR)
+      subtitle = "Spearman rho (group mean) on 5,000-cell/patient subsample",
+      x = sprintf("%s [arcsinh(MFI / %d)]", x_name, COFACTOR),
+      y = sprintf("%s [arcsinh(MFI / %d)]", y_name, COFACTOR)
     ) +
     theme_bw(base_size = 10) +
     theme(legend.position = "none")
@@ -177,12 +177,12 @@ p_rho <- ggplot(corr_mean,
   geom_tile(colour = "white", linewidth = 0.5) +
   geom_text(aes(label = rho_mean), size = 4) +
   facet_wrap(~group) +
-  scale_fill_gradient2(low = "#377EB8", mid = "white", high = "#E41A1C",
+  scale_fill_gradient2(low = "#1A5276", mid = "white", high = "#C0392B",
                        midpoint = 0, limits = c(-1, 1),
                        name = "Spearman rho") +
-  labs(title = "Correlazioni Spearman: autofagia vs ligandi DNAM-1",
-       subtitle = "Media dei rho tra pazienti per gruppo",
-       x = "Ligando DNAM-1", y = "Marcatore autofagia") +
+  labs(title = "Spearman correlations: autophagy markers vs DNAM-1 ligands",
+       subtitle = "Mean rho across patients per group",
+       x = "DNAM-1 ligand", y = "Autophagy marker") +
   theme_bw(base_size = 12)
 
 ggsave(file.path(OUT_PLOTS, "Correlations_03_rho_heatmap_by_group.pdf"),
@@ -201,10 +201,10 @@ p_rho_pat <- ggplot(corr_df,
                     aes(x = pair, y = patient_id, fill = rho)) +
   geom_tile(colour = "white") +
   geom_text(aes(label = rho), size = 3.2) +
-  scale_fill_gradient2(low = "#377EB8", mid = "white", high = "#E41A1C",
+  scale_fill_gradient2(low = "#1A5276", mid = "white", high = "#C0392B",
                        midpoint = 0, limits = c(-1, 1)) +
-  labs(title = "Spearman rho per paziente",
-       x = "Coppia", y = "Paziente") +
+  labs(title = "Spearman rho per patient",
+       x = "Pair", y = "Patient") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 

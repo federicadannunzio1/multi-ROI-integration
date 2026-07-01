@@ -49,8 +49,8 @@ all_patients <- sort(unique(seurat_obj$patient_id))
 g3_patients  <- sort(unique(seurat_obj$patient_id[seurat_obj$group == "G3"]))
 shh_patients <- sort(unique(seurat_obj$patient_id[seurat_obj$group == "SHH"]))
 palette_patient <- c(
-  setNames(colorRampPalette(c("#E41A1C", "#FC8D59"))(length(g3_patients)),  g3_patients),
-  setNames(colorRampPalette(c("#377EB8", "#91BFDB"))(length(shh_patients)), shh_patients)
+  setNames(PALETTE_PATIENTS_G3[seq_along(g3_patients)],   g3_patients),
+  setNames(PALETTE_PATIENTS_SHH[seq_along(shh_patients)], shh_patients)
 )
 
 # --------------------------------------------------------------------------
@@ -88,21 +88,27 @@ for (res in CLUSTERING_RESOLUTIONS) {
 }
 
 # --------------------------------------------------------------------------
-# STEP 4c — Clustree: visualizzazione stabilita' dei cluster
+# STEP 4c — Clustree: prodotto solo se si testano piu' resolutions
+# Con una sola resolution il clustree e' un nodo singolo (non informativo).
+# La resolution 0.1 e' stata gia' validata nella run esplorativa.
 # --------------------------------------------------------------------------
 
 assay_prefix <- paste0(DefaultAssay(seurat_obj), "_snn_res.")
 
-p_clustree <- clustree(seurat_obj, prefix = assay_prefix) +
-  labs(title = "Clustree: stabilita' dei cluster per resolution",
-       subtitle = "Scegliere la resolution dove i cluster si stabilizzano") +
-  theme(legend.position = "bottom")
-
-ggsave(file.path(OUT_PLOTS, "Clustering_01_clustree.pdf"),
-       p_clustree, width = 10, height = 12)
-message("  Salvato: Clustering_01_clustree.pdf")
-message(sprintf("  >> Ispeziona il clustree e verifica che FINAL_RESOLUTION=%.1f sia appropriata",
-                FINAL_RESOLUTION))
+if (length(CLUSTERING_RESOLUTIONS) > 1) {
+  p_clustree <- clustree(seurat_obj, prefix = assay_prefix) +
+    labs(title = "Clustree: cluster stability across resolutions",
+         subtitle = "Select the resolution where clusters stabilize") +
+    theme(legend.position = "bottom")
+  ggsave(file.path(OUT_PLOTS, "Clustering_01_clustree.pdf"),
+         p_clustree, width = 10, height = 12)
+  message("  Salvato: Clustering_01_clustree.pdf")
+  message(sprintf("  >> Ispeziona il clustree e verifica che FINAL_RESOLUTION=%.1f sia appropriata",
+                  FINAL_RESOLUTION))
+} else {
+  message(sprintf("  Clustree saltato: una sola resolution testata (%.1f), gia' validata.",
+                  CLUSTERING_RESOLUTIONS[1]))
+}
 
 # --------------------------------------------------------------------------
 # STEP 4d — Assegna cluster dalla resolution finale
@@ -175,14 +181,14 @@ p_umap_cluster <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, colour = cluster)) +
 p_umap_group <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, colour = group)) +
   geom_point(size = 0.05, alpha = 0.2) +
   scale_colour_manual(values = PALETTE_GROUP) +
-  labs(title = "UMAP — Gruppo (G3 vs SHH)", colour = "Gruppo") +
+  labs(title = "UMAP — Group (G3 vs SHH)", colour = "Group") +
   theme_bw() +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
 
 p_umap_patient <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, colour = patient_id)) +
   geom_point(size = 0.05, alpha = 0.2) +
   scale_colour_manual(values = palette_patient) +
-  labs(title = "UMAP — Paziente", colour = "Paziente") +
+  labs(title = "UMAP — Patient", colour = "Patient") +
   theme_bw() +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
 
@@ -229,7 +235,7 @@ pheatmap(
   clustering_method        = "ward.D2",
   color = colorRampPalette(c("navy", "white", "firebrick3"))(100),
   fontsize = 10,
-  main = "Profili proteici mediani per cluster (Z-score per proteina)",
+  main = "Median protein profiles per cluster (Z-score per protein)",
   filename = file.path(OUT_PLOTS, "Clustering_04_heatmap_cluster_profiles.pdf"),
   width = 8, height = 5
 )

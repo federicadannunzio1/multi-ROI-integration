@@ -20,6 +20,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(RColorBrewer)
   library(pheatmap)
+  library(scales)
 })
 
 .sd <- tryCatch(dirname(sys.frame(1)$ofile), error = function(e) Sys.getenv("MACSIMA_SCRIPTS_DIR"))
@@ -37,8 +38,8 @@ all_patients <- sort(unique(seurat_obj$patient_id))
 g3_patients  <- sort(unique(seurat_obj$patient_id[seurat_obj$group == "G3"]))
 shh_patients <- sort(unique(seurat_obj$patient_id[seurat_obj$group == "SHH"]))
 palette_patient <- c(
-  setNames(colorRampPalette(c("#E41A1C", "#FC8D59"))(length(g3_patients)),  g3_patients),
-  setNames(colorRampPalette(c("#377EB8", "#91BFDB"))(length(shh_patients)), shh_patients)
+  setNames(PALETTE_PATIENTS_G3[seq_along(g3_patients)],   g3_patients),
+  setNames(PALETTE_PATIENTS_SHH[seq_along(shh_patients)], shh_patients)
 )
 palette_cluster <- colorRampPalette(brewer.pal(9, "Set3"))(n_clusters)
 
@@ -78,14 +79,14 @@ p_cluster <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, colour = cluster)) +
 p_group <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, colour = group)) +
   geom_point(size = 0.1, alpha = 0.2) +
   scale_colour_manual(values = PALETTE_GROUP) +
-  labs(x = "UMAP 1", y = "UMAP 2", colour = "Gruppo") +
+  labs(x = "UMAP 1", y = "UMAP 2", colour = "Group") +
   theme_classic(base_size = 12) +
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 1)))
 
 p_patient <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, colour = patient_id)) +
   geom_point(size = 0.1, alpha = 0.2) +
   scale_colour_manual(values = palette_patient) +
-  labs(x = "UMAP 1", y = "UMAP 2", colour = "Paziente") +
+  labs(x = "UMAP 1", y = "UMAP 2", colour = "Patient") +
   theme_classic(base_size = 12) +
   guides(colour = guide_legend(override.aes = list(size = 4, alpha = 1)))
 
@@ -120,9 +121,9 @@ message("  Salvato: Final_02_UMAP_split_group.pdf")
 
 p_dot <- DotPlot(seurat_obj, features = SHORT_NAMES, group.by = "cluster",
   assay = "MICS", scale = TRUE, col.min = -2.5, col.max = 2.5, dot.scale = 6) +
-  scale_colour_gradient2(low = "steelblue", mid = "white", high = "darkred",
+  scale_colour_gradient2(low = "#1A5276", mid = "white", high = "#C0392B",
                          midpoint = 0) +
-  labs(title = "Dot Plot per cluster", x = "Proteina", y = "Cluster") +
+  labs(title = "Dot plot by cluster", x = "Protein", y = "Cluster") +
   theme_bw(base_size = 11) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -144,12 +145,12 @@ cells_heatmap <- lapply(levels(seurat_obj$cluster), function(cl) {
 mat_sample <- mat_all[, cells_heatmap]
 ann_col <- data.frame(
   Cluster = seurat_obj$cluster[cells_heatmap],
-  Gruppo  = seurat_obj$group[cells_heatmap],
+  Group   = seurat_obj$group[cells_heatmap],
   row.names = cells_heatmap
 )
 ann_colors <- list(
   Cluster = setNames(palette_cluster, levels(seurat_obj$cluster)),
-  Gruppo  = PALETTE_GROUP
+  Group   = PALETTE_GROUP
 )
 
 pheatmap(mat_sample,
@@ -160,14 +161,185 @@ pheatmap(mat_sample,
   show_colnames   = FALSE,
   color = colorRampPalette(c("navy", "white", "firebrick3"))(100),
   scale = "row", fontsize_row = 10,
-  main = paste0("Heatmap single-cell (", n_per_cluster, " per cluster)"),
+  main = paste0("Single-cell heatmap (", n_per_cluster, " cells per cluster, Z-score per protein)"),
   filename = file.path(OUT_PLOTS, "Final_04_heatmap_singlecell.pdf"),
   width = 12, height = 5
 )
 message("  Salvato: Final_04_heatmap_singlecell.pdf")
 
 # --------------------------------------------------------------------------
-# STEP 7d — Export matrice integrata completa
+# STEP 7d — Composizione cluster per paziente: barplot stacked + tabella
+# --------------------------------------------------------------------------
+
+message("Composizione cluster per paziente...")
+
+meta_df <- as.data.frame(seurat_obj@meta.data[, c("patient_id", "group", "cluster")])
+
+# Totali marginali (paziente e cluster) — necessari per le percentuali
+tot_patient <- meta_df %>%
+  group_by(patient_id) %>%
+  summarise(total_cells_patient = n(), .groups = "drop")
+
+tot_cluster <- meta_df %>%
+  group_by(cluster) %>%
+  summarise(total_cells_cluster = n(), .groups = "drop")
+
+# ── Tabella principale: una riga per ogni combinazione paziente x cluster ──
+
+comp_table <- meta_df %>%
+  group_by(cluster, patient_id, group) %>%
+  summarise(n_cells = n(), .groups = "drop") %>%
+  left_join(tot_patient, by = "patient_id") %>%
+  left_join(tot_cluster, by = "cluster") %>%
+  mutate(
+    pct_of_cluster = round(100 * n_cells / total_cells_cluster, 2),
+    pct_of_patient = round(100 * n_cells / total_cells_patient, 2)
+  ) %>%
+  arrange(cluster, group, patient_id)
+
+# ── Subtotali per gruppo all'interno di ogni cluster ──
+
+group_subtotals <- comp_table %>%
+  group_by(cluster, group) %>%
+  summarise(
+    patient_id           = paste0("[subtotal_", first(group), "]"),
+    n_cells              = sum(n_cells),
+    total_cells_patient  = NA_real_,
+    total_cells_cluster  = first(total_cells_cluster),
+    pct_of_cluster       = round(sum(pct_of_cluster), 2),
+    pct_of_patient       = NA_real_,
+    .groups = "drop"
+  )
+
+# ── Total per cluster ──
+
+cluster_totals <- comp_table %>%
+  group_by(cluster) %>%
+  summarise(
+    group                = "[total]",
+    patient_id           = "[total]",
+    n_cells              = sum(n_cells),
+    total_cells_patient  = NA_real_,
+    total_cells_cluster  = first(total_cells_cluster),
+    pct_of_cluster       = 100,
+    pct_of_patient       = NA_real_,
+    .groups = "drop"
+  )
+
+# ── TABLE 1 (long): one row per patient x cluster, with subtotals ──
+
+comp_full <- bind_rows(comp_table, group_subtotals, cluster_totals) %>%
+  arrange(cluster,
+          !grepl("^\\[", patient_id),   # patients before subtotals/totals
+          group, patient_id)
+
+write.csv(comp_full,
+          file.path(OUT_DATA, "07_cluster_composition_long.csv"),
+          row.names = FALSE, quote = FALSE)
+message("  Salvato: 07_cluster_composition_long.csv")
+
+# ── TABLE 2 (wide): rows = cluster, cols = patients + group subtotals ──
+# Easiest to read at a glance.
+
+cells_wide <- pivot_wider(
+  comp_table[, c("cluster", "patient_id", "n_cells")],
+  names_from = "patient_id", values_from = "n_cells", values_fill = 0L
+)
+# Aggiungi colonne G3_total, SHH_total e grand total
+cells_wide$G3_total  <- rowSums(cells_wide[, g3_patients,  drop = FALSE])
+cells_wide$SHH_total <- rowSums(cells_wide[, shh_patients, drop = FALSE])
+cells_wide$grand_total <- cells_wide$G3_total + cells_wide$SHH_total
+cells_wide$pct_G3    <- round(100 * cells_wide$G3_total  / cells_wide$grand_total, 1)
+cells_wide$pct_SHH   <- round(100 * cells_wide$SHH_total / cells_wide$grand_total, 1)
+
+write.csv(cells_wide,
+          file.path(OUT_DATA, "07_cluster_composition_wide.csv"),
+          row.names = FALSE, quote = FALSE)
+message("  Salvato: 07_cluster_composition_wide.csv")
+
+# ── TABLE 3 (patient summary): rows = patient, cols = clusters ──
+# How each patient distributes across clusters.
+
+patient_wide <- pivot_wider(
+  comp_table[, c("patient_id", "group", "cluster", "n_cells", "pct_of_patient")],
+  names_from  = "cluster",
+  values_from = c("n_cells", "pct_of_patient"),
+  values_fill = 0
+)
+# Add patient total
+patient_totals <- comp_table %>%
+  group_by(patient_id, group) %>%
+  summarise(total_cells = sum(n_cells), .groups = "drop")
+patient_wide <- left_join(patient_wide, patient_totals, by = c("patient_id", "group")) %>%
+  arrange(group, patient_id)
+
+write.csv(patient_wide,
+          file.path(OUT_DATA, "07_patient_cluster_distribution.csv"),
+          row.names = FALSE, quote = FALSE)
+message("  Salvato: 07_patient_cluster_distribution.csv")
+
+# Print log
+message("\nCells per cluster and patient (wide):")
+print(as.data.frame(cells_wide[, c("cluster", g3_patients, shh_patients,
+                                   "G3_total", "SHH_total", "grand_total",
+                                   "pct_G3", "pct_SHH")]))
+
+message("\n% of cluster occupied per patient:")
+pct_wide <- pivot_wider(
+  comp_table[, c("cluster", "patient_id", "pct_of_cluster")],
+  names_from = "patient_id", values_from = "pct_of_cluster", values_fill = 0
+)
+print(as.data.frame(pct_wide))
+
+# ── Ordine numerico dei cluster per i plot ──
+
+cluster_levels <- sort(unique(as.integer(as.character(comp_table$cluster))))
+comp_table$cluster <- factor(comp_table$cluster, levels = cluster_levels)
+
+# ── Plot A: barplot stacked assoluto (n cellule) ──
+
+p_stack_abs <- ggplot(comp_table,
+    aes(x = cluster, y = n_cells, fill = patient_id)) +
+  geom_col(position = "stack", width = 0.8, colour = "white", linewidth = 0.2) +
+  scale_fill_manual(values = palette_patient) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title    = "Cluster composition by patient — cell counts",
+    subtitle = sprintf("Total: %s cells | %d clusters | %d patients (%d G3, %d SHH)",
+                       format(ncol(seurat_obj), big.mark = ","),
+                       n_clusters,
+                       length(all_patients),
+                       length(g3_patients),
+                       length(shh_patients)),
+    x = "Cluster", y = "Number of cells", fill = "Patient"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "right",
+        panel.grid.major.x = element_blank())
+
+# ── Plot B: barplot stacked proporzionale (% per cluster) ──
+
+p_stack_pct <- ggplot(comp_table,
+    aes(x = cluster, y = pct_of_cluster, fill = patient_id)) +
+  geom_col(position = "stack", width = 0.8, colour = "white", linewidth = 0.2) +
+  scale_fill_manual(values = palette_patient) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"), limits = c(0, 100)) +
+  labs(
+    title    = "Cluster composition by patient — proportions",
+    subtitle = "Each bar sums to 100%: allows comparison across clusters of different sizes",
+    x = "Cluster", y = "% of cells in cluster", fill = "Patient"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "right",
+        panel.grid.major.x = element_blank())
+
+ggsave(file.path(OUT_PLOTS, "Final_05_stacked_barplot_cluster_composition.pdf"),
+       p_stack_abs / p_stack_pct,
+       width = max(10, n_clusters * 0.9 + 3), height = 14)
+message("  Salvato: Final_05_stacked_barplot_cluster_composition.pdf")
+
+# --------------------------------------------------------------------------
+# STEP 7e — Export matrice integrata completa
 # --------------------------------------------------------------------------
 
 message("Export matrice completa...")

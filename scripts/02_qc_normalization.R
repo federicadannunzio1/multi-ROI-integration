@@ -113,10 +113,10 @@ p_cofactor <- ggplot(quantile_df,
   annotate("text", x = 1, y = COFACTOR * 1.05,
            label = paste0("cofactor = ", COFACTOR), hjust = 0, size = 3.5) +
   scale_colour_manual(values = PALETTE_GROUP) +
-  labs(title = "Distribuzione p50 MFI raw per proteina e paziente",
-       subtitle = "Linea tratteggiata = cofactor scelto (mediana dei p50)",
-       x = "Proteina", y = "p50 MFI raw",
-       colour = "Gruppo", shape = "Paziente") +
+  labs(title = "Raw MFI p50 distribution by protein and patient",
+       subtitle = "Dashed line = selected cofactor (median of all p50 values)",
+       x = "Protein", y = "Raw MFI p50",
+       colour = "Group", shape = "Patient") +
   theme_bw(base_size = 12)
 
 ggsave(file.path(OUT_PLOTS, "QC_00_cofactor_selection.pdf"),
@@ -136,9 +136,9 @@ p_raw <- ggplot(df_long_raw,
                 aes(x = intensity, fill = patient_id, colour = patient_id)) +
   geom_density(alpha = 0.3, linewidth = 0.4) +
   facet_grid(protein ~ group, scales = "free") +
-  labs(title = "Distribuzione MFI raw per proteina e gruppo",
-       x = "MFI raw", y = "Densita'",
-       fill = "Paziente", colour = "Paziente") +
+  labs(title = "Raw MFI distribution by protein and group",
+       x = "Raw MFI", y = "Density",
+       fill = "Patient", colour = "Patient") +
   theme_bw(base_size = 10) +
   theme(strip.background = element_rect(fill = "grey90"))
 
@@ -171,9 +171,9 @@ p_norm <- ggplot(df_long_norm,
                  aes(x = arcsinh, fill = patient_id, colour = patient_id)) +
   geom_density(alpha = 0.3, linewidth = 0.4) +
   facet_grid(protein ~ group, scales = "free_y") +
-  labs(title = sprintf("Distribuzione arcsinh (cofactor=%d)", COFACTOR),
-       x = sprintf("arcsinh(MFI / %d)", COFACTOR), y = "Densita'",
-       fill = "Paziente", colour = "Paziente") +
+  labs(title = sprintf("arcsinh-transformed MFI distribution (cofactor = %d)", COFACTOR),
+       x = sprintf("arcsinh(MFI / %d)", COFACTOR), y = "Density",
+       fill = "Patient", colour = "Patient") +
   theme_bw(base_size = 10)
 
 ggsave(file.path(OUT_PLOTS, "QC_02_arcsinh_density_all_samples.pdf"),
@@ -185,9 +185,9 @@ p_ridge <- ggplot(df_long_norm,
   geom_density_ridges(alpha = 0.7, scale = 1.2) +
   facet_wrap(~protein, scales = "free_x", ncol = 3) +
   scale_fill_manual(values = PALETTE_GROUP) +
-  labs(title = "Ridge plot arcsinh per paziente e gruppo",
-       x = sprintf("arcsinh(MFI / %d)", COFACTOR), y = "Paziente",
-       fill = "Gruppo") +
+  labs(title = "arcsinh MFI ridge plot by patient and group",
+       x = sprintf("arcsinh(MFI / %d)", COFACTOR), y = "Patient",
+       fill = "Group") +
   theme_ridges(font_size = 9) +
   theme(legend.position = "top")
 
